@@ -10,16 +10,48 @@ const AdminProfile = () => {
   const [message, setMessage] = useState(null);
 
   const handleSaveProfile = (e) => {
-    e.preventDefault();
+  e.preventDefault();
+
+  // Validar que nombre no esté vacío
+  if (!adminName.trim()) {
+    setMessage({ type: "error", text: "El nombre de usuario es obligatorio." });
+    return;
+  }
+
+  // Validar que email no esté vacío y tenga formato básico
+  if (!adminEmail.trim()) {
+    setMessage({ type: "error", text: "El correo electrónico es obligatorio." });
+    return;
+  }
+  // Email regex básico
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(adminEmail)) {
+    setMessage({ type: "error", text: "El correo electrónico no es válido." });
+    return;
+  }
+
+  // Si se pone alguna contraseña, ambas deben coincidir
+  if (adminPassword || adminPasswordConfirm) {
     if (adminPassword !== adminPasswordConfirm) {
-      setMessage({ type: "error", text: "Las contraseñas no coinciden" });
+      setMessage({ type: "error", text: "Las contraseñas no coinciden." });
       return;
     }
-    // Aquí iría la lógica de actualización (API o localStorage si deseas)
-    setMessage({ type: "success", text: "Perfil actualizado correctamente" });
-    setAdminPassword("");
-    setAdminPasswordConfirm("");
-  };
+    // Opcional: validar longitud mínima de contraseña
+    if (adminPassword.length < 6) {
+      setMessage({ type: "error", text: "La contraseña debe tener al menos 6 caracteres." });
+      return;
+    }
+  }
+
+  // Si pasa todas las validaciones
+  setMessage({ type: "success", text: "Perfil actualizado correctamente." });
+
+  // Limpiar contraseñas
+  setAdminPassword("");
+  setAdminPasswordConfirm("");
+
+  // Aquí iría lógica de actualización (API, localStorage...)
+};
 
   return (
     <div className="admin-profile-container">

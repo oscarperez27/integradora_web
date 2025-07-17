@@ -11,8 +11,12 @@
   top: 0;
   z-index: 10;
   box-shadow: 2px 0 8px rgba(0,0,0,0.06);
+  isolation: isolate;
 }
-
+.sidebar * {
+  color: inherit;
+  opacity: 1 !important;
+}
 .sidebar-logo {
   width: 100%;
   display: flex;

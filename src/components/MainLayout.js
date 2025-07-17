@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import "./MainLayout.css";
 
-const MainLayout = ({ children }) => {
+const MainLayout = ({ children }) => { 
   const navigate = useNavigate();
   const handleLogout = () => {
     localStorage.removeItem("auth"); // Elimina el estado de autenticación

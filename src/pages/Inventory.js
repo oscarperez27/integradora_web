@@ -5,6 +5,8 @@ import {
   MdEdit,
   MdSearch,
 } from "react-icons/md";
+import AlertMessage from "../components/AlertMessage";  // Importa tu componente reutilizable de alertas
+import ConfirmModal from "../components/ConfirmModal";
 import "./Inventory.css";
 
 const initialInventoryData = [
@@ -45,6 +47,7 @@ function InventoryFormModal({ show, onClose, onSave, initial }) {
   const [stock, setStock] = useState(initial?.stock || 0);
   const [price, setPrice] = useState(initial?.price || "");
   const [status, setStatus] = useState(initial?.status || "in-stock");
+  const [formError, setFormError] = useState(null);
 
   useEffect(() => {
     if (show) {
@@ -54,6 +57,7 @@ function InventoryFormModal({ show, onClose, onSave, initial }) {
       setStock(initial?.stock || 0);
       setPrice(initial?.price || "");
       setStatus(initial?.status || "in-stock");
+      setFormError(null);
     }
   }, [show, initial]);
 
@@ -62,13 +66,14 @@ function InventoryFormModal({ show, onClose, onSave, initial }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!sku.trim() || !name.trim() || !category.trim() || !price.trim()) {
-      alert("Todos los campos son obligatorios.");
+      setFormError("Todos los campos son obligatorios.");
       return;
     }
     if (isNaN(Number(stock)) || Number(stock) < 0) {
-      alert("El stock debe ser un número igual o mayor a 0.");
+      setFormError("El stock debe ser un número igual o mayor a 0.");
       return;
     }
+    setFormError(null);
     onSave({
       sku: sku.trim(),
       name: name.trim(),
@@ -83,6 +88,13 @@ function InventoryFormModal({ show, onClose, onSave, initial }) {
     <div className="modal-backdrop">
       <form className="modal-form" onSubmit={handleSubmit}>
         <h2>{isEdit ? "Editar Producto" : "Añadir Producto"}</h2>
+        {formError && (
+          <AlertMessage
+            message={formError}
+            onClose={() => setFormError(null)}
+            type="error"
+          />
+        )}
         <label>
           SKU
           <input
@@ -143,6 +155,7 @@ function InventoryFormModal({ show, onClose, onSave, initial }) {
           <button type="button" className="cancel" onClick={onClose}>Cancelar</button>
         </div>
       </form>
+      
     </div>
   );
 }
@@ -154,6 +167,9 @@ const Inventory = () => {
   const [filterStockStatus, setFilterStockStatus] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInitial, setModalInitial] = useState(null);
+  const [alertMessage, setAlertMessage] = useState(null);
+  const [alertType, setAlertType] = useState("success");
+  const [confirmDelete, setConfirmDelete] = useState({ show: false, sku: null });
 
   // Filter and search
   const filteredProducts = products.filter(product => {
@@ -178,9 +194,18 @@ const Inventory = () => {
   };
 
   const handleDeleteProduct = (sku) => {
-    if (window.confirm("¿Está seguro de eliminar este producto?")) {
-      setProducts(products => products.filter(p => p.sku !== sku));
-    }
+    setConfirmDelete({ show: true, sku });
+  };
+
+  const confirmDeleteProduct = () => {
+    setProducts(products => products.filter(p => p.sku !== confirmDelete.sku));
+    setAlertType("success");
+    setAlertMessage("Producto eliminado correctamente.");
+    setConfirmDelete({ show: false, sku: null });
+  };
+
+  const cancelDeleteProduct = () => {
+    setConfirmDelete({ show: false, sku: null });
   };
 
   const handleModalSave = (product) => {
@@ -188,9 +213,13 @@ const Inventory = () => {
       const index = products.findIndex(p => p.sku === product.sku);
       if (index !== -1) {
         // Edit
+        setAlertType("success");
+        setAlertMessage("Producto actualizado correctamente.");
         return products.map(p => (p.sku === product.sku ? { ...product } : p));
       } else {
         // Create
+        setAlertType("success");
+        setAlertMessage("Producto añadido correctamente.");
         return [...products, product];
       }
     });
@@ -202,20 +231,14 @@ const Inventory = () => {
     setModalOpen(false);
     setModalInitial(null);
   };
+  
 
   return (
     <div className="inventory-container">
       <h1 className="inventory-title">Control de Inventario</h1>
       <h2 className="inventory-subtitle">Suplementos y Productos</h2>
 
-      <div className="actions-bar">
-        <button className="btn-primary" onClick={handleAddProduct}>
-          <MdAdd size={20} style={{ marginRight: 6 }} />
-          Añadir Producto
-        </button>
-      </div>
-
-      <div className="filters-bar">
+      <div className="filters-bar" style={{ alignItems: "center" }}>
         <div className="search-group">
           <MdSearch size={22} className="search-icon" />
           <input
@@ -249,7 +272,21 @@ const Inventory = () => {
             ))}
           </select>
         </div>
+        <div className="add-product-btn-wrapper" style={{ marginLeft: "auto" }}>
+          <button className="btn-primary" onClick={handleAddProduct}>
+            <MdAdd size={20} style={{ marginRight: 6 }} />
+            Añadir Producto
+          </button>
+        </div>
       </div>
+
+      {alertMessage && (
+        <AlertMessage
+          message={alertMessage}
+          type={alertType}
+          onClose={() => setAlertMessage(null)}
+        />
+      )}
 
       <div className="table-scroll-x">
         <table className="inventory-table">
@@ -297,8 +334,10 @@ const Inventory = () => {
                     title="Eliminar"
                     onClick={() => handleDeleteProduct(product.sku)}
                   >
+                    
                     <MdDeleteOutline color="#e74c3c" size={20} />
                   </button>
+                  
                 </td>
               </tr>
             ))}
@@ -312,6 +351,13 @@ const Inventory = () => {
         onSave={handleModalSave}
         initial={modalInitial}
       />
+      <ConfirmModal
+        show={confirmDelete.show}
+        title="Eliminar producto"
+        message="¿Está seguro de eliminar este producto?"
+        onConfirm={confirmDeleteProduct}
+        onCancel={cancelDeleteProduct}
+        />
     </div>
   );
 };

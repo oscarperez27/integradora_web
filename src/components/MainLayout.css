@@ -27,3 +27,22 @@
 .logout-btn:hover {
   background: #ac1128;
 }
+@media (max-width: 600px) {
+  .main-layout {
+    flex-direction: column; /* Por si hay sidebar o más columnas */
+  }
+
+  .main-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 16px 0 16px;
+    gap: 10px;
+  }
+
+  .logout-btn {
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+    font-size: 0.95rem;
+  }
+}

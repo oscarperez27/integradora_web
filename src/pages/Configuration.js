@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { MdSave, MdAddCircle, MdEdit, MdRestartAlt, MdDelete } from "react-icons/md";
 import "./Configuration.css";
+import AlertMessage from "../components/AlertMessage";
+import ConfirmModal from "../components/ConfirmModal";
 
 const initialSensorsData = [
   {
@@ -140,6 +142,7 @@ function SensorFormModal({ show, onClose, onSave, initial }) {
           </button>
         </div>
       </form>
+      
     </div>
   );
 }
@@ -152,19 +155,28 @@ const Configuration = () => {
     "Zona Cardio, Área de Pesas Libres, Salón de Clases Grupales, Recepción, Vestidores"
   );
   const [sensors, setSensors] = useState(initialSensorsData);
-
+  const [alertMessage, setAlertMessage] = useState(null);
+  const [alertType, setAlertType] = useState("info");
+  const [confirmModal, setConfirmModal] = useState({
+  show: false,
+  message: "",
+  action: null, // 'delete' o 'restart'
+  sensorIdx: null
+});
   // Modal state for sensors
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInitial, setModalInitial] = useState(null);
 
   const handleSaveGymInfo = (e) => {
-    e.preventDefault();
-    if (!gymName.trim() || !gymAddress.trim() || !gymPhone.trim()) {
-      alert("Por favor, completa todos los campos obligatorios.");
-      return;
-    }
-    alert("¡Información del gimnasio guardada correctamente!");
-  };
+  e.preventDefault();
+  if (!gymName.trim() || !gymAddress.trim() || !gymPhone.trim()) {
+    setAlertType("error");
+    setAlertMessage("Por favor, completa todos los campos obligatorios.");
+    return;
+  }
+  setAlertType("success");
+  setAlertMessage("¡Información del gimnasio guardada correctamente!");
+};
 
   const handleAddNewSensor = () => {
     setModalInitial(null);
@@ -177,33 +189,58 @@ const Configuration = () => {
   };
 
   const handleDeleteSensor = (idx) => {
-    if (window.confirm("¿Estás seguro de eliminar este sensor?")) {
-      setSensors(sensors => sensors.filter((_, i) => i !== idx));
-    }
-  };
+  const sensor = sensors[idx];
+  setConfirmModal({
+    show: true,
+    message: `¿Estás seguro de eliminar el sensor "${sensor.name}"?`,
+    action: "delete",
+    sensorIdx: idx
+  });
+};
 
   const handleRestartSensor = (idx) => {
-    const sensor = sensors[idx];
-    if (window.confirm(`¿Está seguro de reiniciar el sensor ${sensor.name}?`)) {
-      alert(`Sensor ${sensor.name} reiniciado correctamente.`);
+  const sensor = sensors[idx];
+  setAlertType("info");
+  setAlertMessage(`Sensor "${sensor.name}" reiniciado correctamente.`);
+};
+
+const handleConfirmAction = () => {
+  setConfirmModal(prev => {
+    const { action, sensorIdx } = prev;
+    const sensor = sensors[sensorIdx];
+
+    if (action === "delete") {
+      setSensors(s => s.filter((_, i) => i !== sensorIdx));
+      setAlertType("success");
+      setAlertMessage(`Sensor "${sensor.name}" eliminado correctamente.`);
     }
-  };
+
+    if (action === "restart") {
+      setAlertType("info");
+      setAlertMessage(`Sensor "${sensor.name}" reiniciado correctamente.`);
+    }
+
+    return { show: false, message: "", action: null, sensorIdx: null };
+  });
+};
 
   const handleSensorModalSave = (sensorData) => {
     setSensors(sensors => {
-      if (sensorData.id) {
-        // Edit
-        return sensors.map(s => (s.id === sensorData.id ? { ...sensorData } : s));
-      } else {
-        // Create
-        return [
-          ...sensors,
-          { ...sensorData, id: "s" + (Math.random() + "").slice(2) },
-        ];
-      }
-    });
-    setModalOpen(false);
-    setModalInitial(null);
+  if (sensorData.id) {
+    setAlertType("success");
+    setAlertMessage(`Sensor "${sensorData.name}" editado correctamente.`);
+    return sensors.map(s => (s.id === sensorData.id ? { ...sensorData } : s));
+  } else {
+    setAlertType("success");
+    setAlertMessage(`Sensor "${sensorData.name}" creado correctamente.`);
+    return [
+      ...sensors,
+      { ...sensorData, id: "s" + (Math.random() + "").slice(2) },
+    ];
+  }
+});
+setModalOpen(false);
+setModalInitial(null);
   };
 
   const handleSensorModalClose = () => {
@@ -347,6 +384,18 @@ const Configuration = () => {
         onSave={handleSensorModalSave}
         initial={modalInitial}
       />
+      {alertMessage && (
+        <AlertMessage type={alertType} message={alertMessage} onClose={() => setAlertMessage(null)} />
+      )}
+
+      {confirmModal.show && (
+        <ConfirmModal
+          show={confirmModal.show}
+          message={confirmModal.message}
+          onConfirm={handleConfirmAction}
+          onCancel={() => setConfirmModal({ show: false, message: "", action: null, sensorIdx: null })}
+        />
+      )}
     </div>
   );
 };

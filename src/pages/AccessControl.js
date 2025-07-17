@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { MdPersonAdd, MdEdit, MdDelete } from "react-icons/md";
 import "./AccessControl.css";
+import AlertMessage from "../components/AlertMessage";
+import ConfirmModal from "../components/ConfirmModal";
 
 const defaultPhoto = process.env.PUBLIC_URL + "/assets/yooo.jpg";
 
@@ -30,14 +32,18 @@ const initialCurrentlyInsideData = [
 
 const membershipTypes = ["Premium", "Básica", "Estudiante"];
 
-function MemberForm({ initial, onSave, onClose }) {
+function MemberForm({ initial, onSave, onClose, setAlertMessage, setAlertType }) {
   const [name, setName] = useState(initial.name || "");
   const [membershipType, setMembershipType] = useState(initial.membershipType || "Básica");
   const [photo, setPhoto] = useState(initial.photo || defaultPhoto);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!name.trim()) return alert("El nombre es obligatorio");
+    if (!name.trim()) {
+      setAlertType("error");
+      setAlertMessage("El nombre es obligatorio");
+      return;
+    }       
     onSave({
       ...initial,
       name: name.trim(),
@@ -91,6 +97,9 @@ const AccessControl = () => {
   const [showForm, setShowForm] = useState(false);
   const [formInitial, setFormInitial] = useState({});
   const [editIndex, setEditIndex] = useState(null);
+  const [alertMessage, setAlertMessage] = useState(null);
+  const [alertType, setAlertType] = useState("success"); // "error", "success", "info"
+  const [confirmData, setConfirmData] = useState({ visible: false, idx: null });
 
   const handleAddClick = () => {
     setFormInitial({});
@@ -105,21 +114,30 @@ const AccessControl = () => {
   };
 
   const handleDeleteClick = (idx) => {
-    if (window.confirm("¿Dar de baja a este miembro? (No se eliminará permanentemente)")) {
-      setMembers(members =>
-        members.map((m, i) => (i === idx ? { ...m, active: false } : m))
-      );
-    }
+    setConfirmData({ visible: true, idx });
+  };
+
+  const confirmDelete = () => {
+    setMembers(members =>
+      members.map((m, i) => (i === confirmData.idx ? { ...m, active: false } : m))
+    );
+    setConfirmData({ visible: false, idx: null });
+    setAlertType("success");
+    setAlertMessage("Cliente dado de baja correctamente");
+  };
+
+  const cancelDelete = () => {
+    setConfirmData({ visible: false, idx: null });
   };
 
   const handleFormSave = (member) => {
     if (editIndex !== null) {
-      // Editar
       setMembers(members =>
         members.map((m, i) => (i === editIndex ? { ...member } : m))
       );
+      setAlertType("success");
+      setAlertMessage("Cliente actualizado correctamente");
     } else {
-      // Crear
       setMembers(members => [
         ...members,
         {
@@ -127,6 +145,8 @@ const AccessControl = () => {
           id: "in" + (Math.random() + "").slice(2),
         },
       ]);
+      setAlertType("success");
+      setAlertMessage("Nuevo cliente registrado correctamente");
     }
     setShowForm(false);
   };
@@ -137,19 +157,19 @@ const AccessControl = () => {
 
   return (
     <div className="access-container">
-      <h1 className="access-title">Gestión y Monitoreo de Acceso</h1>
+      <h1 className="access-title">Gestión y Monitoreo de Clientes</h1>
       <div className="quick-stats-bar">
         <div className="stat-card">
           <div className="stat-value">{activeMembers.length}</div>
           <div className="stat-label">Personas Actualmente Dentro</div>
         </div>
       </div>
-      <h2 className="section-subtitle">Registro de Usuarios</h2>
+      <h2 className="section-subtitle">Registro de Clientes</h2>
       <div className="add-member-box">
-        <div className="add-member-box-title">Miembros</div>
+        <div className="add-member-box-title">Clientes</div>
         <button className="btn-add" onClick={handleAddClick}>
           <MdPersonAdd size={20} style={{ marginRight: 6 }} />
-          Nuevo Miembro
+          Nuevo Cliente
         </button>
       </div>
       <div className="table-container">
@@ -187,6 +207,22 @@ const AccessControl = () => {
           initial={formInitial}
           onSave={handleFormSave}
           onClose={handleFormClose}
+          setAlertMessage={setAlertMessage}
+          setAlertType={setAlertType}
+        />
+      )}
+      {alertMessage && (
+        <AlertMessage
+          message={alertMessage}
+          onClose={() => setAlertMessage(null)}
+          type={alertType}
+        />
+      )}
+      {confirmData.visible && (
+        <ConfirmModal
+          message="¿Dar de baja a este miembro? (No se eliminará permanentemente)"
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
         />
       )}
     </div>

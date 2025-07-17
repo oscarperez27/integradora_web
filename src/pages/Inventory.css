@@ -196,3 +196,17 @@
 .modal-actions button:hover {
   opacity: 0.93;
 }
+.add-product-btn-wrapper {
+  margin-left: auto;
+}
+
+@media (max-width: 768px) {
+  .add-product-btn-wrapper {
+    width: 100%;
+    margin-left: 0;
+  }
+  .add-product-btn-wrapper .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -1,5 +1,7 @@
-import React from "react"; // Eliminamos useState y useEffect si no los usamos
+// import React from "react"; // Eliminamos useState y useEffect si no los usamos
+import React, { useState } from "react";
 import "./Monitoring.css";
+import AlertMessage from "../components/AlertMessage";
 
 const initialZoneData = [
   {
@@ -61,8 +63,11 @@ const Monitoring = () => {
   const overallStatus = "Todos los sensores Online"; // Valor constante
   const activeAlerts = 2; // Valor constante
 
+  const [alertMessage, setAlertMessage] = useState(null);
+
   const handleDetails = (zoneName) => {
-    alert(`Mostraría detalles específicos para: ${zoneName}`);
+    ;setAlertMessage(`Mostraría detalles específicos para: ${zoneName}`);
+    // Ocultar automáticamente después de unos segundos
   };
 
   return (
@@ -88,6 +93,7 @@ const Monitoring = () => {
           />
         ))}
       </div>
+      <AlertMessage message={alertMessage} onClose={() => setAlertMessage(null)} />
     </div>
   );
 };

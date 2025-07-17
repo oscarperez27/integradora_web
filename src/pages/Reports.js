@@ -9,6 +9,7 @@ import {
   MdPictureAsPdf,
 } from "react-icons/md";
 import "./Reports.css";
+import AlertMessage from "../components/AlertMessage"; 
 
 const reportTypes = [
   { id: "gym_usage", title: "Uso del Gimnasio", description: "Afluencia, horas pico, uso de zonas." },
@@ -47,6 +48,8 @@ function Reports() {
   const [timeRange, setTimeRange] = useState("");
   const [productCategory, setProductCategory] = useState("");
   const [productName, setProductName] = useState("");
+  const [alertMessage, setAlertMessage] = useState(null);
+  const [alertType, setAlertType] = useState("info");
 
   const handleSelectReportType = (typeId) => {
     setSelectedReportType(typeId);
@@ -57,16 +60,25 @@ function Reports() {
   };
 
   const handleGenerateReport = () => {
-    alert(`Generando reporte de ${selectedReportType || "General"} desde ${startDate} hasta ${endDate}`);
-  };
+  const selectedReport = reportTypes.find(r => r.id === selectedReportType);
+  const title = selectedReport ? selectedReport.title : "General";
+  setAlertType("success");
+  setAlertMessage(`Generando reporte de ${title}`);
+};
 
   const handleDownloadPdf = () => {
-    alert(`Descargando PDF de ${selectedReportType || "General"}`);
-  };
+  const selectedReport = reportTypes.find(r => r.id === selectedReportType);
+  const title = selectedReport ? selectedReport.title : "General";
+  setAlertType("info");
+  setAlertMessage(`Descargando PDF de ${title}`);
+};
 
-  const handleDownloadCsv = () => {
-    alert(`Descargando CSV de ${selectedReportType || "General"}`);
-  };
+const handleDownloadCsv = () => {
+  const selectedReport = reportTypes.find(r => r.id === selectedReportType);
+  const title = selectedReport ? selectedReport.title : "General";
+  setAlertType("info");
+  setAlertMessage(`Descargando CSV de ${title}`);
+};
 
   const renderSpecificFilters = () => {
     switch (selectedReportType) {
@@ -93,6 +105,7 @@ function Reports() {
                 ))}
               </select>
             </div>
+            
           </div>
         );
       case "supp_consumption":
@@ -204,6 +217,13 @@ function Reports() {
           </div>
         </div>
       </div>
+      {alertMessage && (
+  <AlertMessage
+    message={alertMessage}
+    type={alertType}
+    onClose={() => setAlertMessage(null)}
+  />
+)}
     </div>
   );
 }
