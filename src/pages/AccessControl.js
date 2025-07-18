@@ -1,36 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MdPersonAdd, MdEdit, MdDelete } from "react-icons/md";
 import "./AccessControl.css";
 import AlertMessage from "../components/AlertMessage";
 import ConfirmModal from "../components/ConfirmModal";
+import API from "../config/api"; 
 
 const defaultPhoto = process.env.PUBLIC_URL + "/assets/yooo.jpg";
 
-const initialCurrentlyInsideData = [
-  {
-    id: "in1",
-    photo: defaultPhoto,
-    name: "Ana López",
-    membershipType: "Premium",
-    active: true,
-  },
-  {
-    id: "in2",
-    photo: defaultPhoto,
-    name: "Carlos Martínez",
-    membershipType: "Básica",
-    active: true,
-  },
-  {
-    id: "in3",
-    photo: defaultPhoto,
-    name: "Laura Fernández",
-    membershipType: "Estudiante",
-    active: true,
-  },
-];
-
-const membershipTypes = ["Premium", "Básica", "Estudiante"];
+const membershipTypes = ["básica", "estudiante"];
 
 function MemberForm({ initial, onSave, onClose, setAlertMessage, setAlertType }) {
   const [name, setName] = useState(initial.name || "");
@@ -43,7 +20,7 @@ function MemberForm({ initial, onSave, onClose, setAlertMessage, setAlertType })
       setAlertType("error");
       setAlertMessage("El nombre es obligatorio");
       return;
-    }       
+    }
     onSave({
       ...initial,
       name: name.trim(),
@@ -93,13 +70,55 @@ function MemberForm({ initial, onSave, onClose, setAlertMessage, setAlertType })
 }
 
 const AccessControl = () => {
-  const [members, setMembers] = useState(initialCurrentlyInsideData);
+  const [members, setMembers] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [formInitial, setFormInitial] = useState({});
   const [editIndex, setEditIndex] = useState(null);
   const [alertMessage, setAlertMessage] = useState(null);
   const [alertType, setAlertType] = useState("success"); // "error", "success", "info"
   const [confirmData, setConfirmData] = useState({ visible: false, idx: null });
+
+  useEffect(() => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    console.error("No hay token en localStorage");
+    return;
+  }
+
+  fetch(`${API}/api/client/clients`, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  })
+    .then(async res => {
+      const data = await res.json();
+      console.log("Respuesta recibida de /clients:", data);
+
+      if (!res.ok) {
+        throw new Error(data.message || "Error al obtener clientes");
+      }
+
+      if (!Array.isArray(data)) {
+        throw new Error("La respuesta no es un arreglo");
+      }
+
+      const loadedMembers = data.map(c => ({
+        id: c._id,
+        name: `${c.nombre} ${c.apellidos}`,
+        membershipType: c.tipoMembresia,
+        photo: defaultPhoto,
+        active: true,
+      }));
+
+      setMembers(loadedMembers);
+      setAlertMessage(null);
+    })
+    .catch(err => {
+      setAlertType("error");
+      setAlertMessage(err.message || "Error cargando clientes");
+    });
+}, []);
 
   const handleAddClick = () => {
     setFormInitial({});
@@ -117,39 +136,111 @@ const AccessControl = () => {
     setConfirmData({ visible: true, idx });
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
+  const idx = confirmData.idx;
+  const member = members[idx];
+  const token = localStorage.getItem("token");
+
+  try {
+    const res = await fetch(`${API}/api/client/delete/${member.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) throw new Error("Error al eliminar cliente");
+
     setMembers(members =>
-      members.map((m, i) => (i === confirmData.idx ? { ...m, active: false } : m))
+      members.filter((_, i) => i !== idx)
     );
-    setConfirmData({ visible: false, idx: null });
     setAlertType("success");
-    setAlertMessage("Cliente dado de baja correctamente");
-  };
+    setAlertMessage("Cliente eliminado correctamente");
+  } catch (err) {
+    setAlertType("error");
+    setAlertMessage(err.message || "Error al eliminar cliente");
+  } finally {
+    setConfirmData({ visible: false, idx: null });
+  }
+};
 
   const cancelDelete = () => {
     setConfirmData({ visible: false, idx: null });
   };
 
-  const handleFormSave = (member) => {
+  const handleFormSave = async (member) => {
+  const token = localStorage.getItem("token");
+  const body = {
+    nombre: member.name.split(" ")[0],
+    apellidos: member.name.split(" ").slice(1).join(" ") || "Apellido",
+    correo: `auto-${Date.now()}@correo.com`, // si no usas input real
+    telefono: "0000000000",
+    fechaNacimiento: "2000-01-01",
+    telefonoEmergencia: "0000000000",
+    tipoMembresia: member.membershipType,
+  };
+
+  try {
     if (editIndex !== null) {
+      const id = member.id;
+      const res = await fetch(`${API}/api/client/update/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) throw new Error("Error al actualizar cliente");
+
+      const updated = await res.json();
       setMembers(members =>
-        members.map((m, i) => (i === editIndex ? { ...member } : m))
+        members.map((m, i) =>
+          i === editIndex
+            ? {
+                ...m,
+                name: `${updated.client.nombre} ${updated.client.apellidos}`,
+                membershipType: updated.client.tipoMembresia,
+              }
+            : m
+        )
       );
-      setAlertType("success");
       setAlertMessage("Cliente actualizado correctamente");
     } else {
+      const res = await fetch(`${API}/api/client/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) throw new Error("Error al crear cliente");
+
+      const { client } = await res.json();
       setMembers(members => [
         ...members,
         {
-          ...member,
-          id: "in" + (Math.random() + "").slice(2),
+          id: client._id,
+          name: `${client.nombre} ${client.apellidos}`,
+          membershipType: client.tipoMembresia,
+          photo: defaultPhoto,
+          active: true,
         },
       ]);
-      setAlertType("success");
-      setAlertMessage("Nuevo cliente registrado correctamente");
+      setAlertMessage("Cliente creado correctamente");
     }
+
+    setAlertType("success");
     setShowForm(false);
-  };
+  } catch (err) {
+    setAlertType("error");
+    setAlertMessage(err.message || "Error en operación");
+  }
+};
 
   const handleFormClose = () => setShowForm(false);
 
@@ -157,7 +248,7 @@ const AccessControl = () => {
 
   return (
     <div className="access-container">
-      <h1 className="access-title">Gestión y Monitoreo de Clientes</h1>
+      <h1 className="access-title">Monitoreo y Registro de Clientes</h1>
       <div className="quick-stats-bar">
         <div className="stat-card">
           <div className="stat-value">{activeMembers.length}</div>
@@ -223,6 +314,7 @@ const AccessControl = () => {
           message="¿Dar de baja a este miembro? (No se eliminará permanentemente)"
           onConfirm={confirmDelete}
           onCancel={cancelDelete}
+          show={true}
         />
       )}
     </div>

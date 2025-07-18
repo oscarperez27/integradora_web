@@ -5,18 +5,10 @@ import {
   MdEdit,
   MdSearch,
 } from "react-icons/md";
-import AlertMessage from "../components/AlertMessage";  // Importa tu componente reutilizable de alertas
+import AlertMessage from "../components/AlertMessage";
 import ConfirmModal from "../components/ConfirmModal";
-import "./Inventory.css";
-
-const initialInventoryData = [
-  { sku: "PROT-WH001", name: "Proteína Whey Gold Standard 2lb", category: "Proteínas", stock: 25, price: "$850.00", status: "in-stock" },
-  { sku: "CREA-MON005", name: "Creatina Monohidratada 300g", category: "Creatinas", stock: 8, price: "$450.00", status: "low-stock" },
-  { sku: "PREW-C4001", name: "C4 Pre-Entreno Explosivo", category: "Pre-Entrenos", stock: 0, price: "$600.00", status: "out-of-stock" },
-  { sku: "ACC-SHK003", name: "Shaker Prime Gym Logo", category: "Accesorios", stock: 50, price: "$150.00", status: "in-stock" },
-  { sku: "ROPA-TSH01", name: "Playera Dry-Fit", category: "Ropa", stock: 12, price: "$300.00", status: "low-stock" },
-  { sku: "SUP-BCAA001", name: "BCAAs Aminoácidos", category: "Proteínas", stock: 18, price: "$550.00", status: "in-stock" },
-];
+import InventoryFormModal from "../components/InventoryFormModal";
+import API from "../config/api"; 
 
 const categories = [
   "Proteínas",
@@ -39,129 +31,8 @@ const statusMap = {
   "out-of-stock": { label: "Agotado", class: "status-out-of-stock" },
 };
 
-function InventoryFormModal({ show, onClose, onSave, initial }) {
-  const isEdit = !!initial?.sku;
-  const [sku, setSku] = useState(initial?.sku || "");
-  const [name, setName] = useState(initial?.name || "");
-  const [category, setCategory] = useState(initial?.category || categories[0]);
-  const [stock, setStock] = useState(initial?.stock || 0);
-  const [price, setPrice] = useState(initial?.price || "");
-  const [status, setStatus] = useState(initial?.status || "in-stock");
-  const [formError, setFormError] = useState(null);
-
-  useEffect(() => {
-    if (show) {
-      setSku(initial?.sku || "");
-      setName(initial?.name || "");
-      setCategory(initial?.category || categories[0]);
-      setStock(initial?.stock || 0);
-      setPrice(initial?.price || "");
-      setStatus(initial?.status || "in-stock");
-      setFormError(null);
-    }
-  }, [show, initial]);
-
-  if (!show) return null;
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!sku.trim() || !name.trim() || !category.trim() || !price.trim()) {
-      setFormError("Todos los campos son obligatorios.");
-      return;
-    }
-    if (isNaN(Number(stock)) || Number(stock) < 0) {
-      setFormError("El stock debe ser un número igual o mayor a 0.");
-      return;
-    }
-    setFormError(null);
-    onSave({
-      sku: sku.trim(),
-      name: name.trim(),
-      category: category.trim(),
-      stock: Number(stock),
-      price: price.trim(),
-      status,
-    });
-  };
-
-  return (
-    <div className="modal-backdrop">
-      <form className="modal-form" onSubmit={handleSubmit}>
-        <h2>{isEdit ? "Editar Producto" : "Añadir Producto"}</h2>
-        {formError && (
-          <AlertMessage
-            message={formError}
-            onClose={() => setFormError(null)}
-            type="error"
-          />
-        )}
-        <label>
-          SKU
-          <input
-            type="text"
-            value={sku}
-            onChange={e => setSku(e.target.value)}
-            required
-            disabled={isEdit}
-          />
-        </label>
-        <label>
-          Nombre
-          <input
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Categoría
-          <select value={category} onChange={e => setCategory(e.target.value)}>
-            {categories.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Stock
-          <input
-            type="number"
-            min="0"
-            value={stock}
-            onChange={e => setStock(e.target.value)}
-            required
-          />
-        </label>
-        <label>
-          Precio
-          <input
-            type="text"
-            value={price}
-            onChange={e => setPrice(e.target.value)}
-            placeholder="$0.00"
-            required
-          />
-        </label>
-        <label>
-          Estado
-          <select value={status} onChange={e => setStatus(e.target.value)}>
-            {stockStatus.slice(1).map(s => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
-        </label>
-        <div className="modal-actions">
-          <button type="submit">{isEdit ? "Guardar Cambios" : "Crear Producto"}</button>
-          <button type="button" className="cancel" onClick={onClose}>Cancelar</button>
-        </div>
-      </form>
-      
-    </div>
-  );
-}
-
 const Inventory = () => {
-  const [products, setProducts] = useState(initialInventoryData);
+  const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStockStatus, setFilterStockStatus] = useState("");
@@ -171,193 +42,355 @@ const Inventory = () => {
   const [alertType, setAlertType] = useState("success");
   const [confirmDelete, setConfirmDelete] = useState({ show: false, sku: null });
 
-  // Filter and search
-  const filteredProducts = products.filter(product => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.sku.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !filterCategory || product.category === filterCategory;
-    const matchesStockStatus = !filterStockStatus || product.status === filterStockStatus;
-    return matchesSearch && matchesCategory && matchesStockStatus;
+  // Cargar productos al montar el componente
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch(`${API}/api/product/products`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        if (!res.ok) throw new Error("Error al cargar productos");
+
+        const data = await res.json();
+
+        const backendProducts = data.map((p) => ({
+          sku: p.sku,
+          name: p.name,
+          category: p.categoria,
+          stock: p.stock,
+          price: `$${p.price.toFixed(2)}`,
+          status:
+            p.stock === 0
+              ? "out-of-stock"
+              : p.stock < 10
+              ? "low-stock"
+              : "in-stock",
+          _id: p._id,
+          description: p.description,
+        }));
+
+        setProducts(backendProducts);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setAlertType("error");
+        setAlertMessage("Error al cargar productos del servidor.");
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Filtrar productos para mostrar
+  const filteredProducts = products.filter((p) => {
+    const matchQuery =
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchCategory = filterCategory ? p.category === filterCategory : true;
+    const matchStock = filterStockStatus ? p.status === filterStockStatus : true;
+
+    return matchQuery && matchCategory && matchStock;
   });
 
-  // CRUD handlers
+  // Abrir modal para agregar producto
   const handleAddProduct = () => {
     setModalInitial(null);
     setModalOpen(true);
   };
 
+  // Abrir modal para editar producto
   const handleEditProduct = (sku) => {
-    const product = products.find(p => p.sku === sku);
-    setModalInitial({ ...product });
+    const prod = products.find((p) => p.sku === sku);
+    if (!prod) return;
+    setModalInitial(prod);
     setModalOpen(true);
   };
 
-  const handleDeleteProduct = (sku) => {
-    setConfirmDelete({ show: true, sku });
-  };
+  // Guardar producto (crear o actualizar)
+  const handleModalSave = async (product) => {
+    // Convertir price a número (sin $ y coma)
+    const priceNum = Number(product.price.replace(/[^0-9.-]+/g, ""));
+    const body = {
+      name: product.name,
+      sku: product.sku,
+      categoria: product.category,
+      stock: Number(product.stock),
+      price: priceNum,
+      description: product.description || "Sin descripción",
+    };
 
-  const confirmDeleteProduct = () => {
-    setProducts(products => products.filter(p => p.sku !== confirmDelete.sku));
-    setAlertType("success");
-    setAlertMessage("Producto eliminado correctamente.");
-    setConfirmDelete({ show: false, sku: null });
-  };
+    try {
+      if (modalInitial) {
+        // Editar
+        const res = await fetch(`${API}/api/product/product/${modalInitial._id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.message || "Error al actualizar producto");
+        }
+        const { product: updatedProduct } = await res.json();
 
-  const cancelDeleteProduct = () => {
-    setConfirmDelete({ show: false, sku: null });
-  };
-
-  const handleModalSave = (product) => {
-    setProducts(products => {
-      const index = products.findIndex(p => p.sku === product.sku);
-      if (index !== -1) {
-        // Edit
+        setProducts((prev) =>
+          prev.map((p) =>
+            p._id === updatedProduct._id
+              ? {
+                  sku: updatedProduct.sku,
+                  name: updatedProduct.name,
+                  category: updatedProduct.categoria,
+                  stock: updatedProduct.stock,
+                  price: `$${updatedProduct.price.toFixed(2)}`,
+                  status:
+                    updatedProduct.stock === 0
+                      ? "out-of-stock"
+                      : updatedProduct.stock < 10
+                      ? "low-stock"
+                      : "in-stock",
+                  _id: updatedProduct._id,
+                  description: updatedProduct.description,
+                }
+              : p
+          )
+        );
         setAlertType("success");
         setAlertMessage("Producto actualizado correctamente.");
-        return products.map(p => (p.sku === product.sku ? { ...product } : p));
       } else {
-        // Create
+        // Crear
+        const res = await fetch(`${API}/api/product/create`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.message || "Error al crear producto");
+        }
+        const { product: newProduct } = await res.json();
+
+        setProducts((prev) => [
+          ...prev,
+          {
+            sku: newProduct.sku,
+            name: newProduct.name,
+            category: newProduct.categoria,
+            stock: newProduct.stock,
+            price: `$${newProduct.price.toFixed(2)}`,
+            status:
+              newProduct.stock === 0
+                ? "out-of-stock"
+                : newProduct.stock < 10
+                ? "low-stock"
+                : "in-stock",
+            _id: newProduct._id,
+            description: newProduct.description,
+          },
+        ]);
         setAlertType("success");
-        setAlertMessage("Producto añadido correctamente.");
-        return [...products, product];
+        setAlertMessage("Producto creado correctamente.");
       }
-    });
-    setModalOpen(false);
-    setModalInitial(null);
+      setModalOpen(false);
+      setModalInitial(null);
+    } catch (error) {
+      console.error(error);
+      setAlertType("error");
+      setAlertMessage(error.message);
+    }
   };
 
-  const handleModalClose = () => {
-    setModalOpen(false);
-    setModalInitial(null);
+  // Confirmar eliminar producto
+  const confirmDeleteProduct = async () => {
+    try {
+      const skuToDelete = confirmDelete.sku;
+      const prod = products.find((p) => p.sku === skuToDelete);
+      if (!prod) throw new Error("Producto no encontrado");
+
+      const res = await fetch(`${API}/api/product/product/delete/${prod._id}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message || "Error al eliminar producto");
+      }
+
+      setProducts((prev) => prev.filter((p) => p.sku !== skuToDelete));
+      setAlertType("success");
+      setAlertMessage("Producto eliminado correctamente.");
+      setConfirmDelete({ show: false, sku: null });
+    } catch (error) {
+      console.error(error);
+      setAlertType("error");
+      setAlertMessage(error.message);
+      setConfirmDelete({ show: false, sku: null });
+    }
   };
-  
 
   return (
     <div className="inventory-container">
-      <h1 className="inventory-title">Control de Inventario</h1>
-      <h2 className="inventory-subtitle">Suplementos y Productos</h2>
-
-      <div className="filters-bar" style={{ alignItems: "center" }}>
-        <div className="search-group">
-          <MdSearch size={22} className="search-icon" />
-          <input
-            className="search-input"
-            type="text"
-            placeholder="Buscar por nombre o SKU"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="filter-group">
-          <select
-            value={filterCategory}
-            onChange={e => setFilterCategory(e.target.value)}
-            className="filter-select"
-          >
-            <option value="">Todas las categorías</option>
-            {categories.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-group">
-          <select
-            value={filterStockStatus}
-            onChange={e => setFilterStockStatus(e.target.value)}
-            className="filter-select"
-          >
-            {stockStatus.map(s => (
-              <option key={s.value} value={s.value}>{s.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="add-product-btn-wrapper" style={{ marginLeft: "auto" }}>
-          <button className="btn-primary" onClick={handleAddProduct}>
-            <MdAdd size={20} style={{ marginRight: 6 }} />
-            Añadir Producto
-          </button>
-        </div>
-      </div>
+      <h1>Inventario de Productos</h1>
 
       {alertMessage && (
         <AlertMessage
           message={alertMessage}
-          type={alertType}
           onClose={() => setAlertMessage(null)}
+          type={alertType}
         />
       )}
 
-      <div className="table-scroll-x">
-        <table className="inventory-table">
+      <div className="filters-bar" style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+        <div style={{ flexGrow: 1, position: "relative" }}>
+          <MdSearch style={{ position: "absolute", top: "50%", left: 8, transform: "translateY(-50%)", color: "#888" }} />
+          <input
+            style={{ width: "100%", paddingLeft: "30px" }}
+            type="text"
+            placeholder="Buscar por nombre o SKU"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+          <option value="">Todas las categorías</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+
+        <select value={filterStockStatus} onChange={(e) => setFilterStockStatus(e.target.value)}>
+          {stockStatus.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+
+        <button onClick={handleAddProduct} style={{ padding: "0.5rem 1rem", backgroundColor: "#D90429", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
+          <MdAdd style={{ verticalAlign: "middle" }} /> Añadir Producto
+        </button>
+      </div>
+
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr>
-              <th>SKU</th>
-              <th>Producto</th>
-              <th>Categoría</th>
-              <th>Stock</th>
-              <th>Precio</th>
-              <th>Estado</th>
-              <th>Acciones</th>
+            <tr style={{ backgroundColor: "#f0f0f0" }}>
+              <th style={{ padding: "0.5rem", border: "1px solid #ccc" }}>SKU</th>
+              <th style={{ padding: "0.5rem", border: "1px solid #ccc" }}>Nombre</th>
+              <th style={{ padding: "0.5rem", border: "1px solid #ccc" }}>Categoría</th>
+              <th style={{ padding: "0.5rem", border: "1px solid #ccc" }}>Stock</th>
+              <th style={{ padding: "0.5rem", border: "1px solid #ccc" }}>Precio</th>
+              <th style={{ padding: "0.5rem", border: "1px solid #ccc" }}>Estado</th>
+              <th style={{ padding: "0.5rem", border: "1px solid #ccc" }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {filteredProducts.length === 0 && (
+            {filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={7} className="no-products-cell">
-                  No hay productos que coincidan con los filtros.
+                <td colSpan={7} style={{ textAlign: "center", padding: "1rem" }}>
+                  No se encontraron productos.
                 </td>
               </tr>
+            ) : (
+              filteredProducts.map((p) => (
+                <tr key={p.sku}>
+                  <td style={{ padding: "0.5rem", border: "1px solid #ccc" }}>{p.sku}</td>
+                  <td style={{ padding: "0.5rem", border: "1px solid #ccc" }}>{p.name}</td>
+                  <td style={{ padding: "0.5rem", border: "1px solid #ccc" }}>{p.category}</td>
+                  <td style={{ padding: "0.5rem", border: "1px solid #ccc" }}>{p.stock}</td>
+                  <td style={{ padding: "0.5rem", border: "1px solid #ccc" }}>{p.price}</td>
+                  <td style={{ padding: "0.5rem", border: "1px solid #ccc" }}>
+                    <span
+                      className={`status-pill ${statusMap[p.status]?.class}`}
+                      style={{
+                        padding: "0.2rem 0.5rem",
+                        borderRadius: "12px",
+                        color:
+                          p.status === "in-stock"
+                            ? "green"
+                            : p.status === "low-stock"
+                            ? "orange"
+                            : "red",
+                        backgroundColor:
+                          p.status === "in-stock"
+                            ? "#d4edda"
+                            : p.status === "low-stock"
+                            ? "#fff3cd"
+                            : "#f8d7da",
+                      }}
+                    >
+                      {statusMap[p.status]?.label || p.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: "0.5rem", border: "1px solid #ccc" }}>
+                    <button
+                      onClick={() => handleEditProduct(p.sku)}
+                      title="Editar"
+                      style={{
+                        marginRight: 8,
+                        backgroundColor: "#3498db",
+                        color: "white",
+                        border: "none",
+                        padding: "0.3rem 0.6rem",
+                        cursor: "pointer",
+                        borderRadius: 4,
+                      }}
+                    >
+                      <MdEdit />
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete({ show: true, sku: p.sku })}
+                      title="Eliminar"
+                      style={{
+                        backgroundColor: "#e74c3c",
+                        color: "white",
+                        border: "none",
+                        padding: "0.3rem 0.6rem",
+                        cursor: "pointer",
+                        borderRadius: 4,
+                      }}
+                    >
+                      <MdDeleteOutline />
+                    </button>
+                  </td>
+                </tr>
+              ))
             )}
-            {filteredProducts.map(product => (
-              <tr key={product.sku}>
-                <td>{product.sku}</td>
-                <td>{product.name}</td>
-                <td>{product.category}</td>
-                <td>{product.stock}</td>
-                <td>{product.price}</td>
-                <td>
-                  <span className={`stock-status-pill ${statusMap[product.status]?.class}`}>
-                    {statusMap[product.status]?.label || product.status}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    className="icon-btn"
-                    title="Editar"
-                    onClick={() => handleEditProduct(product.sku)}
-                  >
-                    <MdEdit color="#3498db" size={20} />
-                  </button>
-                  <button
-                    className="icon-btn"
-                    title="Eliminar"
-                    onClick={() => handleDeleteProduct(product.sku)}
-                  >
-                    
-                    <MdDeleteOutline color="#e74c3c" size={20} />
-                  </button>
-                  
-                </td>
-              </tr>
-            ))}
           </tbody>
         </table>
       </div>
 
-      <InventoryFormModal
-        show={modalOpen}
-        onClose={handleModalClose}
-        onSave={handleModalSave}
-        initial={modalInitial}
-      />
-      <ConfirmModal
-        show={confirmDelete.show}
-        title="Eliminar producto"
-        message="¿Está seguro de eliminar este producto?"
-        onConfirm={confirmDeleteProduct}
-        onCancel={cancelDeleteProduct}
+      {confirmDelete.show && (
+        <ConfirmModal
+          message={`¿Seguro que deseas eliminar el producto con SKU "${confirmDelete.sku}"?`}
+          onConfirm={confirmDeleteProduct}
+          onCancel={() => setConfirmDelete({ show: false, sku: null })}
+          show={true} // ✅ Esta prop sí la espera ConfirmModal
         />
+      )}
+      {modalOpen && (
+        <InventoryFormModal
+          show={modalOpen}
+          onClose={() => {
+            setModalOpen(false);
+            setModalInitial(null);
+          }}
+          onSubmit={handleModalSave}
+          initialData={modalInitial}
+        />
+      )}
     </div>
   );
 };

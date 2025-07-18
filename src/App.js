@@ -10,19 +10,19 @@ import Reports from "./pages/Reports";
 import Configuration from "./pages/Configuration";
 import AdminProfile from "./pages/AdminProfile";
 import ForgotPassword from "./pages/ForgotPassword"; // Importar el componente ForgotPassword
+import ResetPassword from "./pages/ResetPassword";
+import Orders from "./pages/Orders";
+import Employes from "./pages/Employes";
 import "./App.css";
 
 function App() {
   // Inicializar el estado de autenticación basado en localStorage
-  const [authenticated, setAuthenticated] = useState(
-    localStorage.getItem("auth") === "yes"
-  );
+  const [authenticated, setAuthenticated] = useState(!!localStorage.getItem("token"));
 
   // Función para manejar el inicio de sesión
   const handleLogin = () => {
-    localStorage.setItem("auth", "yes");
-    setAuthenticated(true);
-  };
+  setAuthenticated(true);
+};
 
   // Componente de ruta protegida
   const ProtectedRoute = ({ children }) => {
@@ -45,6 +45,7 @@ function App() {
         {/* Rutas públicas */}
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/forgot-password" element={<ForgotPassword />} /> {/* Ruta para ForgotPassword */}
+        <Route path="/resetpassword" element={<ResetPassword />} />
 
         {/* Rutas protegidas */}
         <Route path="/" element={<ProtectedRoute><Navigate to="/dashboard" /></ProtectedRoute>} />
@@ -53,8 +54,10 @@ function App() {
         <Route path="/access-control" element={<ProtectedRoute><AccessControl /></ProtectedRoute>} />
         <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+        <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
         <Route path="/configuration" element={<ProtectedRoute><Configuration /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><AdminProfile /></ProtectedRoute>} />
+        <Route path="/employes" element={<ProtectedRoute><Employes /></ProtectedRoute>} />
 
         {/* Redirigir cualquier otra ruta a login si no está autenticado */}
         <Route path="*" element={authenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />

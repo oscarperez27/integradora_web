@@ -10,6 +10,7 @@ import {
 } from "react-icons/md";
 import "./Reports.css";
 import AlertMessage from "../components/AlertMessage"; 
+import API from "../config/api"; 
 
 const reportTypes = [
   { id: "gym_usage", title: "Uso del Gimnasio", description: "Afluencia, horas pico, uso de zonas." },
@@ -66,11 +67,57 @@ function Reports() {
   setAlertMessage(`Generando reporte de ${title}`);
 };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
+  if (!startDate || !endDate) {
+    setAlertType("warning");
+    setAlertMessage("Selecciona una fecha de inicio y fin");
+    return;
+  }
+
   const selectedReport = reportTypes.find(r => r.id === selectedReportType);
   const title = selectedReport ? selectedReport.title : "General";
-  setAlertType("info");
-  setAlertMessage(`Descargando PDF de ${title}`);
+
+  let endpoint = "";
+  if (selectedReportType === "env_performance") {
+    endpoint = (`${API}/api/report/reports/ambient`);
+  } else if (selectedReportType === "supp_consumption") {
+    endpoint = (`${API}/api/report/reports/sales`);
+  } else {
+    setAlertType("warning");
+    setAlertMessage("Este tipo de reporte aún no está disponible para descargar.");
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${endpoint}?startDate=${startDate}&endDate=${endDate}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || "Error al generar el reporte");
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reporte_${selectedReportType}_${startDate}_a_${endDate}.pdf`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+
+    setAlertType("success");
+    setAlertMessage(`Reporte de ${title} descargado correctamente.`);
+  } catch (error) {
+    console.error(error);
+    setAlertType("error");
+    setAlertMessage(error.message || "Hubo un error al generar el reporte.");
+  }
 };
 
 const handleDownloadCsv = () => {

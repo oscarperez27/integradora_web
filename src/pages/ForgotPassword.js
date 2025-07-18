@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./ForgotPassword.css";
+import API from "../config/api"; // Asegúrate de que este archivo exporte la URL base
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -8,16 +9,33 @@ const ForgotPassword = () => {
   const [errorMsg, setErrorMsg] = useState("");
   const navigate = useNavigate();
 
-  const handleSend = (e) => {
-    e.preventDefault();
-    if (!email.trim() || !email.includes("@")) {
-      setErrorMsg("Ingresa un correo electrónico válido.");
+  const handleSend = async (e) => {
+  e.preventDefault();
+  if (!email.trim() || !email.includes("@")) {
+    setErrorMsg("Ingresa un correo electrónico válido.");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API}/api/auth/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setErrorMsg(data.message || "Ocurrió un error.");
       return;
     }
-    setErrorMsg("");
-    // Simulación de envío de correo
-    setTimeout(() => setSent(true), 800);
-  };
+
+    setSent(true);
+  } catch (error) {
+    setErrorMsg("Error al enviar solicitud.");
+    console.error(error);
+  }
+};
 
   return (
     <div className="forgot-bg">
@@ -29,7 +47,7 @@ const ForgotPassword = () => {
         {errorMsg && <div className="forgot-error">{errorMsg}</div>}
         {sent ? (
           <div className="forgot-success">
-            ¡Correo enviado! Si el correo existe, recibirás instrucciones para restablecer tu contraseña.
+            Te hemos enviado un correo con instrucciones para restablecer tu contraseña.
           </div>
         ) : (
           <>

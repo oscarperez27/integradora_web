@@ -1,33 +1,13 @@
-// import React from "react"; // Eliminamos useState y useEffect si no los usamos
-import React, { useState } from "react";
+// src/pages/Monitoring.js
+import React, { useState, useEffect } from "react";
 import "./Monitoring.css";
 import AlertMessage from "../components/AlertMessage";
+import API from "../config/api"; 
 
-const initialZoneData = [
-  {
-    id: "1",
-    zoneName: "Zona de ejercicios Cardio",
-    status: "Óptimo",
-    temp: 22,
-    humidity: 50,
-    lastUpdated: "Hace 1 min",
-  },
-  {
-    id: "2",
-    zoneName: "Área de Pesas Libres",
-    status: "Temperatura Alta",
-    temp: 28,
-    humidity: 58,
-    lastUpdated: "Hace 2 min",
-  },
-  {
-    id: "3",
-    zoneName: "Salón de Clases Grupales",
-    status: "Humedad Elevada",
-    temp: 24,
-    humidity: 75,
-    lastUpdated: "Hace 1 min",
-  },
+const zonas = [
+  { id: "1", name: "Zona de ejercicios Cardio", key: "cardio" },
+  { id: "2", name: "Área de Pesas Libres", key: "pesas" },
+  { id: "3", name: "Salón de Clases Grupales", key: "clases" },
 ];
 
 function ZoneCard({ zoneName, status, temp, humidity, lastUpdated, onDetails }) {
@@ -60,14 +40,58 @@ function ZoneCard({ zoneName, status, temp, humidity, lastUpdated, onDetails }) 
 }
 
 const Monitoring = () => {
-  const overallStatus = "Todos los sensores Online"; // Valor constante
-  const activeAlerts = 2; // Valor constante
-
+  const [zoneData, setZoneData] = useState([]);
   const [alertMessage, setAlertMessage] = useState(null);
 
+  const overallStatus = "Todos los sensores Online";
+  const activeAlerts = zoneData.filter(
+    (z) => z.status.toLowerCase().includes("alta") || z.status.toLowerCase().includes("elevada")
+  ).length;
+
+  const fetchZoneData = async () => {
+    const today = new Date().toISOString().split("T")[0];
+    try {
+      const data = await Promise.all(
+        zonas.map(async (zona) => {
+          const [tempRes, humRes] = await Promise.all([
+            fetch(`${API}/api/sensor/temperatureByZone?zona=${zona.key}&startDate=${today}&endDate=${today}`),
+            fetch(`${API}/api/sensor/humidityByZone?zona=${zona.key}&startDate=${today}&endDate=${today}`),
+          ]);
+
+          const tempData = await tempRes.json();
+          const humData = await humRes.json();
+
+          const lastTemp = tempData[tempData.length - 1]?.valor || 0;
+          const lastHum = humData[humData.length - 1]?.valor || 0;
+
+          // Determinar estado
+          let status = "Óptimo";
+          if (lastTemp > 26) status = "Temperatura Alta";
+          if (lastHum > 70) status = "Humedad Elevada";
+
+          return {
+            id: zona.id,
+            zoneName: zona.name,
+            status,
+            temp: lastTemp,
+            humidity: lastHum,
+            lastUpdated: "Hace 1 min", // Puedes mejorar con timestamp real si quieres
+          };
+        })
+      );
+      setZoneData(data);
+    } catch (err) {
+      console.error("Error al cargar datos de sensores", err);
+      setAlertMessage("Error al cargar datos de sensores");
+    }
+  };
+
+  useEffect(() => {
+    fetchZoneData();
+  }, []);
+
   const handleDetails = (zoneName) => {
-    ;setAlertMessage(`Mostraría detalles específicos para: ${zoneName}`);
-    // Ocultar automáticamente después de unos segundos
+    setAlertMessage(`Mostraría detalles específicos para: ${zoneName}`);
   };
 
   return (
@@ -85,14 +109,11 @@ const Monitoring = () => {
       </div>
 
       <div className="zone-grid">
-        {initialZoneData.map(zone => (
-          <ZoneCard
-            key={zone.id}
-            {...zone}
-            onDetails={() => handleDetails(zone.zoneName)}
-          />
+        {zoneData.map((zone) => (
+          <ZoneCard key={zone.id} {...zone} onDetails={() => handleDetails(zone.zoneName)} />
         ))}
       </div>
+
       <AlertMessage message={alertMessage} onClose={() => setAlertMessage(null)} />
     </div>
   );

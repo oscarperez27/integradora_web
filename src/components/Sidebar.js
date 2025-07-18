@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { MdDashboard, MdSettings } from "react-icons/md";
+import { MdDashboard, MdSettings, MdPeople } from "react-icons/md";
 import { FaBoxes, FaUserCircle } from "react-icons/fa";
-import { IoMdFingerPrint } from "react-icons/io";
 import { FiFileText } from "react-icons/fi";
 import { GiChart } from "react-icons/gi";
+import { RiTeamLine } from "react-icons/ri";
+import { BsClipboardCheck } from "react-icons/bs";
 import ConfirmModal from "../components/ConfirmModal";
 import "./Sidebar.css";
 
@@ -20,11 +21,14 @@ const Sidebar = () => {
   const menu = [
     { to: "/dashboard", icon: <MdDashboard size={22} />, label: "Dashboard" },
     { to: "/monitoring", icon: <GiChart size={22} />, label: "Monitoreo Ambiental" },
-    { to: "/access-control", icon: <IoMdFingerPrint size={22} />, label: "Control de Acceso" },
+    { to: "/access-control", icon: <MdPeople size={22} />, label: "Gestion de Clientes" },
     { to: "/inventory", icon: <FaBoxes size={22} />, label: "Inventario" },
     { to: "/reports", icon: <FiFileText size={22} />, label: "Reportes" },
+    { to: "/orders", icon: <BsClipboardCheck size={22} />, label: "Ordenes" },
     { to: "/configuration", icon: <MdSettings size={22} />, label: "Configuración" },
-    { to: "/profile", icon: <FaUserCircle size={22} />, label: "Perfil Admin" }
+    { to: "/profile", icon: <FaUserCircle size={22} />, label: "Perfil Admin" },
+    { to: "/employes", icon: <RiTeamLine size={22} />, label: "Gestion de empleados" },
+
   ];
 
   return (

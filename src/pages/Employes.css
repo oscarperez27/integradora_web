@@ -1,0 +1,95 @@
+.employees-container {
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.employees-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.employees-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+}
+
+.employees-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.employees-search input {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  width: 200px;
+}
+
+.employees-table-container {
+  overflow-x: auto;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.employees-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.employees-table th,
+.employees-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
+}
+
+.employees-table th {
+  background-color: #f7f7f7;
+  font-weight: bold;
+  color: #555;
+}
+
+.employees-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #333;
+  transition: color 0.2s;
+}
+
+.icon-button:hover {
+  color: #007bff;
+}
+
+.add-employee-btn {
+  display: flex;
+  align-items: center;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s;
+  font-size: 14px;
+}
+
+.add-employee-btn:hover {
+  background-color: #0056b3;
+}
+
+.alert-message {
+  margin-top: 10px;
+}
