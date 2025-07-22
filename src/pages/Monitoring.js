@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from "react";
 import "./Monitoring.css";
 import AlertMessage from "../components/AlertMessage";
-import API from "../config/api"; 
+import LoadingSpinner from "../components/LoadingSpinner";
+import API from "../config/api";
 
 const zonas = [
-  { id: "1", name: "Zona de ejercicios Cardio", key: "zona1" }, // Asegúrate que la zona 'key' coincida con las zonas en tu BD
+  { id: "1", name: "Zona de ejercicios Cardio", key: "zona1" },
   { id: "2", name: "Área de Pesas Libres", key: "zona2" },
   { id: "3", name: "Salón de Clases Grupales", key: "zona3" },
 ];
 
 function ZoneCard({ zoneName, status, temp, humidity, lastUpdated, onDetails }) {
-  let statusClass = "zone-optimal";
-  if (status.toLowerCase().includes("alta") || status.toLowerCase().includes("elevada")) {
-    statusClass = "zone-alert";
-  }
+  const statusClass =
+    status.toLowerCase().includes("alta") || status.toLowerCase().includes("elevada")
+      ? "zone-alert"
+      : "zone-optimal";
+
   return (
     <div className={`zone-card ${statusClass}`}>
       <div className="zone-title">{zoneName}</div>
@@ -41,65 +43,69 @@ function ZoneCard({ zoneName, status, temp, humidity, lastUpdated, onDetails }) 
 const Monitoring = () => {
   const [zoneData, setZoneData] = useState([]);
   const [alertMessage, setAlertMessage] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const overallStatus = "Todos los sensores Online";
   const activeAlerts = zoneData.filter(
-    (z) => z.status.toLowerCase().includes("alta") || z.status.toLowerCase().includes("elevada")
+    (z) =>
+      z.status.toLowerCase().includes("alta") || z.status.toLowerCase().includes("elevada")
   ).length;
 
-  const fetchZoneData = async () => {
-  // Obtener la fecha actual en formato YYYY-MM-DD
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-    const today = `${yyyy}-${mm}-${dd}`;
-
-    try {
-      const data = await Promise.all(
-        zonas.map(async (zona) => {
-          const [tempRes, humRes] = await Promise.all([
-            fetch(`${API}/api/sensor/temperatureByZone?zona=${zona.key}&startDate=${today}&endDate=${today}`, {
-              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-            }),
-            fetch(`${API}/api/sensor/humidityByZone?zona=${zona.key}&startDate=${today}&endDate=${today}`, {
-              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-            }),
-          ]);
-
-          if (!tempRes.ok || !humRes.ok) {
-            throw new Error(`Error al obtener datos para la zona ${zona.name}`);
-          }
-
-          const tempData = await tempRes.json();
-          const humData = await humRes.json();
-
-          const lastTemp = tempData.length > 0 ? tempData[tempData.length - 1].valor : 0;
-          const lastHum = humData.length > 0 ? humData[humData.length - 1].valor : 0;
-
-          // Determinar estado
-          let status = "Óptimo";
-          if (lastTemp > 26) status = "Temperatura Alta";
-          if (lastHum > 70) status = "Humedad Elevada";
-
-          return {
-            id: zona.id,
-            zoneName: zona.name,
-            status,
-            temp: lastTemp,
-            humidity: lastHum,
-            lastUpdated: "Hace 1 min", // puedes mejorar con timestamp real
-          };
-        })
-      );
-      setZoneData(data);
-    } catch (err) {
-      console.error("Error al cargar datos de sensores", err);
-      setAlertMessage("Error al cargar datos de sensores");
-    }
-  };
-
   useEffect(() => {
+    const fetchZoneData = async () => {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      const today = `${yyyy}-${mm}-${dd}`;
+
+      try {
+        const data = await Promise.all(
+          zonas.map(async (zona) => {
+            const [tempRes, humRes] = await Promise.all([
+              fetch(
+                `${API}/api/sensor/temperatureByZone?zona=${zona.key}&startDate=${today}&endDate=${today}`,
+                { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+              ),
+              fetch(
+                `${API}/api/sensor/humidityByZone?zona=${zona.key}&startDate=${today}&endDate=${today}`,
+                { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+              ),
+            ]);
+
+            if (!tempRes.ok || !humRes.ok) {
+              throw new Error(`Error al obtener datos para la zona ${zona.name}`);
+            }
+
+            const tempData = await tempRes.json();
+            const humData = await humRes.json();
+
+            const lastTemp = tempData.length > 0 ? tempData[tempData.length - 1].valor : 0;
+            const lastHum = humData.length > 0 ? humData[humData.length - 1].valor : 0;
+
+            let status = "Óptimo";
+            if (lastTemp > 26) status = "Temperatura Alta";
+            if (lastHum > 70) status = "Humedad Elevada";
+
+            return {
+              id: zona.id,
+              zoneName: zona.name,
+              status,
+              temp: lastTemp,
+              humidity: lastHum,
+              lastUpdated: "Hace 1 min",
+            };
+          })
+        );
+        setZoneData(data);
+      } catch (err) {
+        console.error("Error al cargar datos de sensores", err);
+        setAlertMessage("Error al cargar datos de sensores");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchZoneData();
   }, []);
 
@@ -107,9 +113,12 @@ const Monitoring = () => {
     setAlertMessage(`Mostraría detalles específicos para: ${zoneName}`);
   };
 
+  if (loading) return <LoadingSpinner />;
+
   return (
     <div className="monitoring-container">
       <h1 className="monitoring-title">Estado Ambiental del Gimnasio</h1>
+
       <div className="monitoring-overview">
         <div>
           <span className="overview-label">Estado General: </span>

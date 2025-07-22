@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import {
   MdAdd,
-  MdDeleteOutline,
   MdEdit,
   MdSearch,
 } from "react-icons/md";
 import AlertMessage from "../components/AlertMessage";
 import ConfirmModal from "../components/ConfirmModal";
 import InventoryFormModal from "../components/InventoryFormModal";
+import LoadingSpinner from "../components/LoadingSpinner"; 
+
 import API from "../config/api"; 
 
 const categories = [
@@ -41,11 +42,12 @@ const Inventory = () => {
   const [alertMessage, setAlertMessage] = useState(null);
   const [alertType, setAlertType] = useState("success");
   const [confirmDelete, setConfirmDelete] = useState({ show: false, sku: null });
+  const [loading, setLoading] = useState(true); // estado carga
 
-  // Cargar productos al montar el componente
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+        setLoading(true);
         const res = await fetch(`${API}/api/product/products`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -76,13 +78,14 @@ const Inventory = () => {
         console.error("Error fetching products:", error);
         setAlertType("error");
         setAlertMessage("Error al cargar productos del servidor.");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchProducts();
   }, []);
 
-  // Filtrar productos para mostrar
   const filteredProducts = products.filter((p) => {
     const matchQuery =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -94,13 +97,11 @@ const Inventory = () => {
     return matchQuery && matchCategory && matchStock;
   });
 
-  // Abrir modal para agregar producto
   const handleAddProduct = () => {
     setModalInitial(null);
     setModalOpen(true);
   };
 
-  // Abrir modal para editar producto
   const handleEditProduct = (sku) => {
     const prod = products.find((p) => p.sku === sku);
     if (!prod) return;
@@ -108,9 +109,7 @@ const Inventory = () => {
     setModalOpen(true);
   };
 
-  // Guardar producto (crear o actualizar)
   const handleModalSave = async (product) => {
-    // Convertir price a número (sin $ y coma)
     const priceNum = Number(product.price.replace(/[^0-9.-]+/g, ""));
     const body = {
       name: product.name,
@@ -123,7 +122,6 @@ const Inventory = () => {
 
     try {
       if (modalInitial) {
-        // Editar
         const res = await fetch(`${API}/api/product/product/${modalInitial._id}`, {
           method: "PUT",
           headers: {
@@ -162,7 +160,6 @@ const Inventory = () => {
         setAlertType("success");
         setAlertMessage("Producto actualizado correctamente.");
       } else {
-        // Crear
         const res = await fetch(`${API}/api/product/create`, {
           method: "POST",
           headers: {
@@ -207,7 +204,6 @@ const Inventory = () => {
     }
   };
 
-  // Confirmar eliminar producto
   const confirmDeleteProduct = async () => {
     try {
       const skuToDelete = confirmDelete.sku;
@@ -236,6 +232,10 @@ const Inventory = () => {
       setConfirmDelete({ show: false, sku: null });
     }
   };
+
+  if (loading) {
+  return <LoadingSpinner />;
+}
 
   return (
     <div className="inventory-container">
@@ -362,7 +362,8 @@ const Inventory = () => {
                         borderRadius: 4,
                       }}
                     >
-                      <MdDeleteOutline />
+                      {/* Reutilizar icono MdDeleteOutline si lo quieres, sino quita import */}
+                      🗑️
                     </button>
                   </td>
                 </tr>
@@ -377,7 +378,7 @@ const Inventory = () => {
           message={`¿Seguro que deseas eliminar el producto con SKU "${confirmDelete.sku}"?`}
           onConfirm={confirmDeleteProduct}
           onCancel={() => setConfirmDelete({ show: false, sku: null })}
-          show={true} // ✅ Esta prop sí la espera ConfirmModal
+          show={true}
         />
       )}
       {modalOpen && (

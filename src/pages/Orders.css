@@ -12,11 +12,9 @@
   font-size: 2rem;
   font-weight: bold;
   margin-bottom: 20px;
-  color: #1a1a1a;
   text-align: center;
 }
 
-/* Mensajes de error */
 .orders-error {
   background-color: #ffdddd;
   border: 1px solid #d90429;
@@ -28,112 +26,164 @@
   text-align: center;
 }
 
-/* Formulario para nueva orden */
+.search-bar {
+  margin-bottom: 1rem;
+  text-align: right;
+}
+
+.search-bar input {
+  padding: 8px;
+  width: 250px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.create-order-section {
+  margin: 20px 0;
+}
+
+.open-order-form-btn {
+  background-color: #d90429;
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.open-order-form-btn:hover {
+  background-color: #ac1128;
+}
+
 .new-order-form {
   background: #fff;
   border-radius: 8px;
-  padding: 20px 24px;
+  padding: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  margin-bottom: 30px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .new-order-form h3 {
   font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0 0 8px 0;
-  color: #1a1a1a;
+  margin-bottom: 10px;
 }
 
-.new-order-form label {
-  font-weight: 600;
-  color: #1a1a1a;
-  font-size: 1rem;
-  margin-bottom: 4px;
-  display: block;
+.product-input-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 6px 0;
 }
 
-.new-order-form input,
-.new-order-form select {
-  padding: 10px 12px;
-  border-radius: 5px;
-  border: 1px solid #aaa;
+.product-input-row input {
+  width: 60px;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
   font-size: 1rem;
-  background: #f7f7f7;
-  transition: border-color 0.2s;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  box-sizing: border-box;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
 }
 
-.new-order-form input:focus,
-.new-order-form select:focus {
-  border-color: #d90429;
-  outline: none;
-  background: #fff;
+.modal-content {
+  background-color: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Botón crear */
+.modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .create-btn {
-  background: #d90429;
-  color: #fff;
+  background-color: #d90429;
+  color: white;
+  padding: 10px 24px;
   border: none;
-  border-radius: 5px;
-  padding: 12px 0;
-  font-weight: 700;
-  font-size: 1.1rem;
+  border-radius: 6px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background-color 0.2s ease;
 }
 
 .create-btn:hover {
-  background: #ac1128;
+  background-color: #ac1128;
 }
 
-/* Lista de órdenes */
+.cancel-btn {
+  background-color: #777;
+  color: white;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.loader {
+  text-align: center;
+  font-weight: bold;
+  padding: 2rem;
+  font-size: 1.2rem;
+}
+
 .orders-list {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* Tarjeta de orden */
 .order-card {
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  padding: 20px 24px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
-/* Header de la orden */
 .order-header {
   display: flex;
   justify-content: space-between;
   font-weight: 600;
   font-size: 1.1rem;
-  color: #1a1a1a;
 }
 
-/* Body de la orden */
 .order-body p {
   margin: 4px 0;
   font-size: 0.95rem;
   color: #333;
 }
 
-/* Lista de productos */
 .product-list {
   list-style-type: disc;
   margin-left: 20px;
-  color: #555;
   font-size: 0.9rem;
+  color: #555;
 }
 
-/* Botones de acciones */
 .order-actions {
   margin-top: 12px;
   display: flex;
@@ -148,14 +198,12 @@
   font-weight: 700;
   font-size: 1rem;
   cursor: pointer;
-  transition: background 0.2s;
   color: #fff;
-  user-select: none;
-  box-shadow: 0 2px 4px rgb(0 0 0 / 0.12);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
 }
 
 .order-actions button:first-child {
-  background: #27ae60; /* verde */
+  background: #27ae60;
 }
 
 .order-actions button:first-child:hover {
@@ -163,14 +211,13 @@
 }
 
 .order-actions button:last-child {
-  background: #d90429; /* rojo */
+  background: #d90429;
 }
 
 .order-actions button:last-child:hover {
   background: #ac1128;
 }
 
-/* Texto cuando no hay órdenes */
 .orders-list > p {
   text-align: center;
   color: #666;
@@ -178,38 +225,28 @@
   margin-top: 40px;
 }
 
-.product-input-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
+/* RESPONSIVO */
+@media (max-width: 600px) {
+  .order-header {
+    flex-direction: column;
+    gap: 6px;
+  }
 
-.product-input-row span {
-  flex-grow: 1;
-  font-weight: 500;
-}
+  .product-input-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
 
-.product-input-row input[type="number"] {
-  width: 60px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-}
+  .search-bar input {
+    width: 100%;
+  }
 
-.create-btn {
-  margin-top: 12px;
-  padding: 10px 24px;
-  background-color: #d90429;
-  border: none;
-  border-radius: 8px;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
+  .modal-content {
+    padding: 16px;
+  }
 
-.create-btn:hover {
-  background-color: #ac1128;
+  .order-actions {
+    flex-direction: column;
+  }
 }
