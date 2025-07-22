@@ -1,13 +1,12 @@
-// src/pages/Monitoring.js
 import React, { useState, useEffect } from "react";
 import "./Monitoring.css";
 import AlertMessage from "../components/AlertMessage";
 import API from "../config/api"; 
 
 const zonas = [
-  { id: "1", name: "Zona de ejercicios Cardio", key: "cardio" },
-  { id: "2", name: "Área de Pesas Libres", key: "pesas" },
-  { id: "3", name: "Salón de Clases Grupales", key: "clases" },
+  { id: "1", name: "Zona de ejercicios Cardio", key: "zona1" }, // Asegúrate que la zona 'key' coincida con las zonas en tu BD
+  { id: "2", name: "Área de Pesas Libres", key: "zona2" },
+  { id: "3", name: "Salón de Clases Grupales", key: "zona3" },
 ];
 
 function ZoneCard({ zoneName, status, temp, humidity, lastUpdated, onDetails }) {
@@ -49,20 +48,34 @@ const Monitoring = () => {
   ).length;
 
   const fetchZoneData = async () => {
-    const today = new Date().toISOString().split("T")[0];
+  // Obtener la fecha actual en formato YYYY-MM-DD
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const today = `${yyyy}-${mm}-${dd}`;
+
     try {
       const data = await Promise.all(
         zonas.map(async (zona) => {
           const [tempRes, humRes] = await Promise.all([
-            fetch(`${API}/api/sensor/temperatureByZone?zona=${zona.key}&startDate=${today}&endDate=${today}`),
-            fetch(`${API}/api/sensor/humidityByZone?zona=${zona.key}&startDate=${today}&endDate=${today}`),
+            fetch(`${API}/api/sensor/temperatureByZone?zona=${zona.key}&startDate=${today}&endDate=${today}`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+            }),
+            fetch(`${API}/api/sensor/humidityByZone?zona=${zona.key}&startDate=${today}&endDate=${today}`, {
+              headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+            }),
           ]);
+
+          if (!tempRes.ok || !humRes.ok) {
+            throw new Error(`Error al obtener datos para la zona ${zona.name}`);
+          }
 
           const tempData = await tempRes.json();
           const humData = await humRes.json();
 
-          const lastTemp = tempData[tempData.length - 1]?.valor || 0;
-          const lastHum = humData[humData.length - 1]?.valor || 0;
+          const lastTemp = tempData.length > 0 ? tempData[tempData.length - 1].valor : 0;
+          const lastHum = humData.length > 0 ? humData[humData.length - 1].valor : 0;
 
           // Determinar estado
           let status = "Óptimo";
@@ -75,7 +88,7 @@ const Monitoring = () => {
             status,
             temp: lastTemp,
             humidity: lastHum,
-            lastUpdated: "Hace 1 min", // Puedes mejorar con timestamp real si quieres
+            lastUpdated: "Hace 1 min", // puedes mejorar con timestamp real
           };
         })
       );

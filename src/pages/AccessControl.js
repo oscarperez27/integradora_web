@@ -11,7 +11,7 @@ const membershipTypes = ["básica", "estudiante"];
 
 function MemberForm({ initial, onSave, onClose, setAlertMessage, setAlertType }) {
   const [name, setName] = useState(initial.name || "");
-  const [membershipType, setMembershipType] = useState(initial.membershipType || "Básica");
+  const [membershipType, setMembershipType] = useState(initial.membershipType || "básica");
   const [photo, setPhoto] = useState(initial.photo || defaultPhoto);
 
   const handleSubmit = (e) => {
@@ -75,50 +75,66 @@ const AccessControl = () => {
   const [formInitial, setFormInitial] = useState({});
   const [editIndex, setEditIndex] = useState(null);
   const [alertMessage, setAlertMessage] = useState(null);
-  const [alertType, setAlertType] = useState("success"); // "error", "success", "info"
+  const [alertType, setAlertType] = useState("success");
   const [confirmData, setConfirmData] = useState({ visible: false, idx: null });
 
+  const [personCountSummary, setPersonCountSummary] = useState({
+    actuales: 0,
+    entradas: 0,
+    salidas: 0,
+  });
+
   useEffect(() => {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    console.error("No hay token en localStorage");
-    return;
-  }
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No hay token en localStorage");
+      return;
+    }
 
-  fetch(`${API}/api/client/clients`, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  })
-    .then(async res => {
-      const data = await res.json();
-      console.log("Respuesta recibida de /clients:", data);
-
-      if (!res.ok) {
-        throw new Error(data.message || "Error al obtener clientes");
-      }
-
-      if (!Array.isArray(data)) {
-        throw new Error("La respuesta no es un arreglo");
-      }
-
-      const loadedMembers = data.map(c => ({
-        id: c._id,
-        name: `${c.nombre} ${c.apellidos}`,
-        membershipType: c.tipoMembresia,
-        photo: defaultPhoto,
-        active: true,
-      }));
-
-      setMembers(loadedMembers);
-      setAlertMessage(null);
+    // Obtener miembros
+    fetch(`${API}/api/client/clients`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
     })
-    .catch(err => {
-      setAlertType("error");
-      setAlertMessage(err.message || "Error cargando clientes");
-    });
-}, []);
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Error al obtener clientes");
+
+        const loadedMembers = data.map(c => ({
+          id: c._id,
+          name: `${c.nombre} ${c.apellidos}`,
+          membershipType: c.tipoMembresia,
+          photo: defaultPhoto,
+          active: true,
+        }));
+        setMembers(loadedMembers);
+      })
+      .catch(err => {
+        setAlertType("error");
+        setAlertMessage(err.message || "Error cargando clientes");
+      });
+
+    // Obtener conteo de personas
+    fetch(`${API}/api/sensor/people-countToday`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Error al obtener resumen de acceso");
+        setPersonCountSummary({
+          actuales: data.actuales,
+          entradas: data.entradas,
+          salidas: data.salidas,
+        });
+      })
+      .catch(err => {
+        console.error("Error al obtener resumen diario:", err);
+      });
+  }, []);
 
   const handleAddClick = () => {
     setFormInitial({});
@@ -250,11 +266,19 @@ const AccessControl = () => {
     <div className="access-container">
       <h1 className="access-title">Monitoreo y Registro de Clientes</h1>
       <div className="quick-stats-bar">
-        <div className="stat-card">
-          <div className="stat-value">{activeMembers.length}</div>
-          <div className="stat-label">Personas Actualmente Dentro</div>
-        </div>
+      <div className="stat-card">
+        <div className="stat-value">{personCountSummary.actuales}</div>
+        <div className="stat-label">Personas Actualmente Dentro</div>
       </div>
+      <div className="stat-card">
+        <div className="stat-value">{personCountSummary.entradas}</div>
+        <div className="stat-label">Entradas Hoy</div>
+      </div>
+      <div className="stat-card">
+        <div className="stat-value">{personCountSummary.salidas}</div>
+        <div className="stat-label">Salidas Hoy</div>
+      </div>
+    </div>
       <h2 className="section-subtitle">Registro de Clientes</h2>
       <div className="add-member-box">
         <div className="add-member-box-title">Clientes</div>

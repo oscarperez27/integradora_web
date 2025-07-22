@@ -13,6 +13,7 @@ import ForgotPassword from "./pages/ForgotPassword"; // Importar el componente F
 import ResetPassword from "./pages/ResetPassword";
 import Orders from "./pages/Orders";
 import Employes from "./pages/Employes";
+import { isAdmin } from "./utils/auth"; 
 import "./App.css";
 
 function App() {
@@ -25,19 +26,22 @@ function App() {
 };
 
   // Componente de ruta protegida
-  const ProtectedRoute = ({ children }) => {
-    if (!authenticated) {
-      return <Navigate to="/login" replace />;
-    }
-    return (
-      <div className="app-layout">
-        <Sidebar />
-        <div className="app-content">
-          {children}
-        </div>
-      </div>
-    );
-  };
+  const ProtectedRoute = ({ children, adminOnly = false }) => {
+  if (!authenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (adminOnly && !isAdmin()) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return (
+    <div className="app-layout">
+      <Sidebar />
+      <div className="app-content">{children}</div>
+    </div>
+  );
+};
 
   return (
     <Router>
@@ -57,7 +61,7 @@ function App() {
         <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
         <Route path="/configuration" element={<ProtectedRoute><Configuration /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><AdminProfile /></ProtectedRoute>} />
-        <Route path="/employes" element={<ProtectedRoute><Employes /></ProtectedRoute>} />
+        <Route path="/employes" element={<ProtectedRoute adminOnly={true}><Employes /></ProtectedRoute>} />
 
         {/* Redirigir cualquier otra ruta a login si no está autenticado */}
         <Route path="*" element={authenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />} />

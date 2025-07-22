@@ -7,11 +7,13 @@ import { GiChart } from "react-icons/gi";
 import { RiTeamLine } from "react-icons/ri";
 import { BsClipboardCheck } from "react-icons/bs";
 import ConfirmModal from "../components/ConfirmModal";
+import { isAdmin } from "../utils/auth"; 
 import "./Sidebar.css";
 
 const Sidebar = () => {
   const location = useLocation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+   const admin = isAdmin();
 
   const handleLogout = () => {
     localStorage.removeItem("auth");
@@ -23,12 +25,13 @@ const Sidebar = () => {
     { to: "/monitoring", icon: <GiChart size={22} />, label: "Monitoreo Ambiental" },
     { to: "/access-control", icon: <MdPeople size={22} />, label: "Gestion de Clientes" },
     { to: "/inventory", icon: <FaBoxes size={22} />, label: "Inventario" },
-    { to: "/reports", icon: <FiFileText size={22} />, label: "Reportes" },
     { to: "/orders", icon: <BsClipboardCheck size={22} />, label: "Ordenes" },
-    { to: "/configuration", icon: <MdSettings size={22} />, label: "Configuración" },
+    ...(admin
+      ?[{ to: "/employes", icon: <RiTeamLine size={22} />, label: "Gestion de empleados" },]
+      : []),
+    { to: "/reports", icon: <FiFileText size={22} />, label: "Reportes" },
     { to: "/profile", icon: <FaUserCircle size={22} />, label: "Perfil Admin" },
-    { to: "/employes", icon: <RiTeamLine size={22} />, label: "Gestion de empleados" },
-
+    { to: "/configuration", icon: <MdSettings size={22} />, label: "Configuración" },
   ];
 
   return (

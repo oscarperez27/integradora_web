@@ -22,8 +22,9 @@ function WidgetCard({ title, icon, children }) {
 const Dashboard = () => {
   const [alerts, setAlerts] = useState([]);
   const [accessData, setAccessData] = useState({
-    currentPeople: 0,
-    totalAccessesToday: 0,
+    actuales: 0,
+    entradas: 0,
+    salidas: 0,
   });
   const [environmentData, setEnvironmentData] = useState({
     avgTemp: "--",
@@ -38,73 +39,130 @@ const Dashboard = () => {
 
   const token = localStorage.getItem("token");
 
+  // Obtiene fechas para hoy YYYY-MM-DD
   const getTodayDates = () => {
-  const now = new Date();
-  now.setDate(now.getDate() - 1); // restar un día para probar
-  const yyyy = now.getUTCFullYear();
-  const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(now.getUTCDate()).padStart(2, "0");
-  return {
-    startDate: `${yyyy}-${mm}-${dd}`,
-    endDate: `${yyyy}-${mm}-${dd}`,
-  };
-};
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
 
-  const updateAlerts = (newAlerts) => {
-    setAlerts(prev => {
-      // Filtrar alertas con mismos ids para evitar duplicados
-      const filtered = prev.filter(
-        alert => !newAlerts.some(newAlert => newAlert.id === alert.id)
-      );
-      return [...filtered, ...newAlerts];
-    });
+    const today = `${yyyy}-${mm}-${dd}`;
+    return {
+      startDate: today,
+      endDate: today,
+    };
   };
 
-  const fetchPeopleCount = useCallback(async () => {
-  try {
-    const res = await fetch(`${API}/api/sensor/people-count?timestamp=${Date.now()}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store", // opción para evitar cache
-    });
-    const data = await res.json();
+  // Fetch conteo diario accesos
+  const fetchPeopleCountToday = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/api/sensor/people-countToday`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Error al obtener conteo diario");
 
-    setAccessData({
-      currentPeople: data.conteoActual ?? 0,
-      totalAccessesToday: data.entradas ?? 0,
-    });
-  } catch (err) {
-    console.error("Error en people-count:", err);
-  }
-}, [token]);
+      setAccessData({
+        actuales: data.actuales || 0,
+        entradas: data.entradas || 0,
+        salidas: data.salidas || 0,
+      });
+    } catch (err) {
+      console.error("Error en people-countToday:", err);
+    }
+  }, [token]);
 
+  // Calcula promedio de un arreglo de números
+  const calcAverage = (arr) => {
+    if (!arr.length) return "--";
+    const sum = arr.reduce((a, b) => a + b, 0);
+    return (sum / arr.length).toFixed(1);
+  };
+
+  // Fetch datos de temperatura
   const fetchTemperature = useCallback(async () => {
-  const { startDate, endDate } = getTodayDates();
-  try {
-    const res = await fetch(
-      `${API}/api/sensor/temperature?startDate=${startDate}&endDate=${endDate}&timestamp=${Date.now()}`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }
-    );
-    const data = await res.json();
-    // resto igual...
-  } catch (err) {
-    console.error("Error en temperatura:", err);
-  }
-}, [token]);
+    const { startDate, endDate } = getTodayDates();
+    try {
+      const res = await fetch(
+        `${API}/api/sensor/temperature?startDate=${startDate}&endDate=${endDate}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Error al obtener temperatura");
 
-const fetchHumidity = useCallback(async () => {
-  const { startDate, endDate } = getTodayDates();
-  try {
-    const res = await fetch(
-      `${API}/api/sensor/humidity?startDate=${startDate}&endDate=${endDate}&timestamp=${Date.now()}`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }
-    );
-    const data = await res.json();
-    // resto igual...
-  } catch (err) {
-    console.error("Error en humedad:", err);
-  }
-}, [token]);
+      // data es arreglo con objetos que tienen al menos .valor o similar (ajusta según tu modelo)
+      // Aquí asumo que cada doc tiene un campo 'valor' con temperatura numérica
+      const temps = data.map(d => d.valor).filter(v => typeof v === "number");
 
+      const avgTemp = calcAverage(temps);
+      let statusType = "ok";
+      let status = "Temperatura normal";
+
+      if (avgTemp === "--") {
+        statusType = "info";
+        status = "Sin datos de temperatura";
+      } else if (avgTemp > 28) {
+        statusType = "warning";
+        status = "Temperatura alta";
+      } else if (avgTemp < 10) {
+        statusType = "danger";
+        status = "Temperatura baja";
+      }
+
+      setEnvironmentData(env => ({
+        ...env,
+        avgTemp,
+        status,
+        statusType,
+      }));
+    } catch (err) {
+      console.error("Error en temperatura:", err);
+      setEnvironmentData(env => ({
+        ...env,
+        avgTemp: "--",
+        status: "Error al cargar temperatura",
+        statusType: "danger",
+      }));
+    }
+  }, [token]);
+
+  // Fetch datos de humedad
+  const fetchHumidity = useCallback(async () => {
+    const { startDate, endDate } = getTodayDates();
+    try {
+      const res = await fetch(
+        `${API}/api/sensor/humidity?startDate=${startDate}&endDate=${endDate}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: "no-store",
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Error al obtener humedad");
+
+      // data es arreglo con objetos que tienen al menos .valor o similar (ajusta según tu modelo)
+      const hums = data.map(d => d.valor).filter(v => typeof v === "number");
+
+      const avgHumidity = calcAverage(hums);
+
+      setEnvironmentData(env => ({
+        ...env,
+        avgHumidity,
+      }));
+    } catch (err) {
+      console.error("Error en humedad:", err);
+      setEnvironmentData(env => ({
+        ...env,
+        avgHumidity: "--",
+      }));
+    }
+  }, [token]);
+
+  // Fetch productos inventario
   const fetchProducts = useCallback(async () => {
     try {
       const res = await fetch(`${API}/api/product/products`, {
@@ -120,7 +178,7 @@ const fetchHumidity = useCallback(async () => {
       });
 
       setAlerts(prev => {
-        const nonStockAlerts = prev.filter(alert => !alert.id.startsWith("stock-"));
+        const nonStockAlerts = prev.filter(alert => !alert.id?.startsWith?.("stock-"));
         const stockAlerts = lowStock.map(p => ({
           id: "stock-" + p._id,
           type: "warning",
@@ -135,13 +193,13 @@ const fetchHumidity = useCallback(async () => {
   }, [token]);
 
   useEffect(() => {
-  if (!token) return;
+    if (!token) return;
 
-  fetchPeopleCount();
-  fetchProducts();
-  fetchTemperature();
-  fetchHumidity();
-}, [token, fetchPeopleCount, fetchProducts, fetchTemperature, fetchHumidity]);
+    fetchPeopleCountToday();
+    fetchProducts();
+    fetchTemperature();
+    fetchHumidity();
+  }, [token, fetchPeopleCountToday, fetchProducts, fetchTemperature, fetchHumidity]);
 
   const statusColor = {
     ok: "#27ae60",
@@ -187,12 +245,16 @@ const fetchHumidity = useCallback(async () => {
           icon={<MdPeople size={28} color="#3498db" />}
         >
           <div className="widget-data-container">
-            <span className="widget-value">{accessData.currentPeople}</span>
+            <span className="widget-value">{accessData.actuales}</span>
             <span className="widget-label">Personas Actualmente</span>
           </div>
           <div className="widget-data-container">
-            <span className="widget-value">{accessData.totalAccessesToday}</span>
-            <span className="widget-label">Total Accesos del Día</span>
+            <span className="widget-value">{accessData.entradas}</span>
+            <span className="widget-label">Entradas Hoy</span>
+          </div>
+          <div className="widget-data-container">
+            <span className="widget-value">{accessData.salidas}</span>
+            <span className="widget-label">Salidas Hoy</span>
           </div>
         </WidgetCard>
 
@@ -201,19 +263,17 @@ const fetchHumidity = useCallback(async () => {
           icon={<FaThermometerHalf size={26} color="#27ae60" />}
         >
           <div className="widget-data-container">
-            <span className="widget-value">{environmentData.avgTemp}</span>
+            <span className="widget-value">{environmentData.avgTemp} °C</span>
             <span className="widget-label">Temperatura Promedio</span>
           </div>
           <div className="widget-data-container">
-            <span className="widget-value">{environmentData.avgHumidity}</span>
+            <span className="widget-value">{environmentData.avgHumidity} %</span>
             <span className="widget-label">Humedad Promedio</span>
           </div>
           <div className="status-container">
             <span
               className="status-text"
-              style={{
-                color: statusColor[environmentData.statusType] || "#333",
-              }}
+              style={{ color: statusColor[environmentData.statusType] || "#333" }}
             >
               {environmentData.status}
             </span>

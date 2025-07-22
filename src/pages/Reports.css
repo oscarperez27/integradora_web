@@ -128,7 +128,7 @@
   background-color: #ac1128;
 }
 .btn-download-pdf {
-  background-color: #3498db;
+  background-color: #d90429;
   color: #fff;
   font-weight: bold;
   font-size: 15px;
@@ -141,7 +141,7 @@
   transition: background 0.17s;
 }
 .btn-download-pdf:hover {
-  background-color: #217dbb;
+  background-color: #ac1128;
 }
 .btn-download-csv {
   background-color: #2e7d32;
