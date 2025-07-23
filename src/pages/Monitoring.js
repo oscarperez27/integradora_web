@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./Monitoring.css";
 import AlertMessage from "../components/AlertMessage";
 import LoadingSpinner from "../components/LoadingSpinner";
+import SensorModal from "../components/SensorModal";
 import API from "../config/api";
 
 const zonas = [
@@ -44,6 +45,9 @@ const Monitoring = () => {
   const [zoneData, setZoneData] = useState([]);
   const [alertMessage, setAlertMessage] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState([]);
+  const [selectedZone, setSelectedZone] = useState("");
 
   const overallStatus = "Todos los sensores Online";
   const activeAlerts = zoneData.filter(
@@ -109,36 +113,86 @@ const Monitoring = () => {
     fetchZoneData();
   }, []);
 
-  const handleDetails = (zoneName) => {
-    setAlertMessage(`Mostraría detalles específicos para: ${zoneName}`);
-  };
+  const handleDetails = async (zoneKey, zoneName) => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const today = `${yyyy}-${mm}-${dd}`;
+
+  try {
+    const [tempRes, humRes] = await Promise.all([
+      fetch(`${API}/api/sensor/temperatureByZone?zona=${zoneKey}&startDate=${today}&endDate=${today}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      }),
+      fetch(`${API}/api/sensor/humidityByZone?zona=${zoneKey}&startDate=${today}&endDate=${today}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      }),
+    ]);
+
+    if (!tempRes.ok || !humRes.ok) {
+      throw new Error("Error al obtener los datos");
+    }
+
+    const tempData = await tempRes.json();
+    const humData = await humRes.json();
+
+    const mergedData = tempData.map((t, i) => ({
+      hora: t.hora || `Dato ${i + 1}`,
+      temp: t.valor,
+      hum: humData[i]?.valor || 0,
+    }));
+
+    setModalData(mergedData);
+    setSelectedZone(zoneName);
+    setModalOpen(true);
+  } catch (error) {
+    console.error(error);
+    setAlertMessage("No se pudieron obtener los detalles.");
+  }
+};
 
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="monitoring-container">
-      <h1 className="monitoring-title">Estado Ambiental del Gimnasio</h1>
+  <div className="monitoring-container">
+    <h1 className="monitoring-title">Estado Ambiental del Gimnasio</h1>
 
-      <div className="monitoring-overview">
-        <div>
-          <span className="overview-label">Estado General: </span>
-          <span className="sensors-ok">{overallStatus}</span>
-        </div>
-        <div>
-          <span className="overview-label">Alertas: </span>
-          <span className="alerts-active">{activeAlerts} Activas</span>
-        </div>
+    <div className="monitoring-overview">
+      <div>
+        <span className="overview-label">Estado General: </span>
+        <span className="sensors-ok">{overallStatus}</span>
       </div>
-
-      <div className="zone-grid">
-        {zoneData.map((zone) => (
-          <ZoneCard key={zone.id} {...zone} onDetails={() => handleDetails(zone.zoneName)} />
-        ))}
+      <div>
+        <span className="overview-label">Alertas: </span>
+        <span className="alerts-active">{activeAlerts} Activas</span>
       </div>
-
-      <AlertMessage message={alertMessage} onClose={() => setAlertMessage(null)} />
     </div>
-  );
+
+    <div className="zone-grid">
+      {zoneData.map((zone) => (
+        <ZoneCard
+          key={zone.id}
+          {...zone}
+          onDetails={() => {
+            const zona = zonas.find((z) => z.name === zone.zoneName);
+            handleDetails(zona.key, zone.zoneName);
+          }}
+        />
+      ))}
+    </div>
+
+    <SensorModal
+      open={modalOpen}
+      onClose={() => setModalOpen(false)}
+      data={modalData}
+      zoneName={selectedZone}
+    />
+
+    <AlertMessage message={alertMessage} onClose={() => setAlertMessage(null)} />
+  </div>
+);
+
 };
 
 export default Monitoring;

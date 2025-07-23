@@ -66,6 +66,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 /* Botones */
@@ -81,7 +83,6 @@
   font-weight: bold;
   cursor: pointer;
   transition: background 0.2s;
-  margin-left: 10px;
 }
 
 .btn-add:hover {
@@ -114,6 +115,7 @@
 .table-header-row, .table-row {
   display: flex;
   align-items: center;
+  min-width: 600px;
 }
 
 .table-header-row {
@@ -238,3 +240,22 @@
   opacity: 0.9;
 }
 
+/* Responsivo */
+@media (max-width: 600px) {
+  .access-title {
+    font-size: 1.5rem;
+  }
+
+  .btn-add {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stat-card {
+    width: 100%;
+  }
+
+  .modal-form {
+    width: 90%;
+  }
+}
